@@ -1,0 +1,13 @@
+node_modules/
+uploads/
+.env
+*.log
+.DS_Store
+coverage/
+tests/.tmp/
+
+# Docker / local secrets
+.env.*
+!.env.example
+!.env.docker.example
+127.0.0.1*

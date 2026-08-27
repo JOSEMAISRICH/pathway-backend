@@ -1,0 +1,53 @@
+{
+  "name": "pathway-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "check:mongo": "node scripts/check-mongo.js",
+    "migrate:case-docs": "node scripts/migrate-case-documents-magic-expiry.js",
+    "pdf:template": "node scripts/generate-ex10-template.js",
+    "docker:up": "docker compose up --build",
+    "docker:up:local": "docker compose -f docker-compose.yml -f docker-compose.local-db.yml up --build",
+    "docker:down": "docker compose down",
+    "smoke": "bash scripts/smoke-flow.sh",
+    "test": "jest --runInBand",
+    "test:watch": "jest --runInBand --watch",
+    "test:coverage": "jest --runInBand --coverage"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.18.0",
+    "npm": ">=11.4.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1046.0",
+    "@aws-sdk/s3-request-presigner": "^3.1046.0",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jose": "^6.2.2",
+    "mongoose": "^9.4.1",
+    "multer": "^2.1.1",
+    "openai": "^6.34.0",
+    "pdf-lib": "^1.17.1",
+    "resend": "^6.12.3",
+    "stripe": "^22.5.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.5",
+    "babel-jest": "^30.4.1",
+    "jest": "^30.4.2",
+    "mongodb-memory-server": "^11.1.0",
+    "supertest": "^7.2.2"
+  }
+}

@@ -1,0 +1,36 @@
+# PathWay Backend — Docker Compose
+#
+# Rápido (Atlas + .env):
+#   docker compose up --build
+#
+# Mongo local:
+#   docker compose -f docker-compose.yml -f docker-compose.local-db.yml up --build
+#
+# Parar: docker compose down
+
+services:
+  api:
+    build: .
+    container_name: pathway-api
+    ports:
+      - "${API_PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      PORT: "3000"
+      NODE_ENV: production
+      UPLOAD_DIR: uploads
+    volumes:
+      - pathway_uploads:/app/uploads
+      # Opcional: monta plantillas locales (si no hay EX10, el entrypoint genera una)
+      - ./pdf-templates:/app/pdf-templates
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+
+volumes:
+  pathway_uploads:
