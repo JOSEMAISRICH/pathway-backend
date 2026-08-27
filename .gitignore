@@ -11,3 +11,4 @@ tests/.tmp/
 !.env.example
 !.env.docker.example
 127.0.0.1*
+.github/workflows/
