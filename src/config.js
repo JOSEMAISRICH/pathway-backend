@@ -62,8 +62,8 @@ const config = {
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   /** Opcional: Price ID del Dashboard. Si vacío, Checkout usa price_data (75 €/mes). */
   stripePriceId: process.env.STRIPE_PRICE_ID || '',
-  /** Días de prueba al crear Checkout (0 = sin trial). Default 7. */
-  stripeTrialDays: Math.max(0, Number(process.env.STRIPE_TRIAL_DAYS ?? 7) || 0),
+  /** Días de prueba gratuita en app tras registrarse (sin Stripe). Default 7. */
+  appTrialDays: Math.max(0, Number(process.env.APP_TRIAL_DAYS ?? 7) || 0),
 };
 
 module.exports = { config };

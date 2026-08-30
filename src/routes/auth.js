@@ -45,7 +45,15 @@ router.post('/register', mongoReady, async (req, res) => {
   }
   try {
     const passwordHash = await hashPassword(password);
-    const agency = await Agency.create({ name, email, passwordHash });
+    const trialDays = config.appTrialDays;
+    const trialEndsAt =
+      trialDays > 0 ? new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000) : null;
+    const agency = await Agency.create({
+      name,
+      email,
+      passwordHash,
+      ...(trialEndsAt ? { trialEndsAt } : {}),
+    });
     const token = await signSession(agency.id);
     res.cookie(config.cookieName, token, sessionCookieOptions());
     return res.status(201).json({ ok: true, agency: agency.toJSON(), token });

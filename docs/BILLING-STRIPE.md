@@ -45,16 +45,16 @@ if (sessionId) {
 }
 ```
 
-## Trial
+## Trial (prueba gratuita en app)
 
-Por defecto el Checkout incluye **7 días de prueba** (`subscription_data.trial_period_days`).
+Al **registrarse**, el despacho recibe **7 días de prueba** sin tarjeta ni Stripe. El API devuelve `billing.active: true` y `billing.status: "app_trial"`.
 
 ```env
-# Opcional (default 7). Pon 0 para cobrar desde el día 1.
-# STRIPE_TRIAL_DAYS=7
+# Opcional (default 7). Pon 0 para desactivar la prueba en app.
+# APP_TRIAL_DAYS=7
 ```
 
-Durante el trial Stripe marca la suscripción como `trialing`. El API lo trata como plan activo (`billing.active: true`).
+**Stripe solo al suscribirse** (`POST /api/billing/checkout` con `trial: false` o sin body). Checkout cobra desde el primer día; no hay trial en Stripe.
 
 ## Variables `.env`
 
@@ -64,8 +64,8 @@ STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 # Opcional (Price del Dashboard); si vacío → 75 €/mes
 # STRIPE_PRICE_ID=price_...
-# Días de prueba en Checkout (default 7; 0 = sin trial)
-# STRIPE_TRIAL_DAYS=7
+# Días de prueba gratuita en app tras registrarse (default 7; 0 = sin prueba)
+# APP_TRIAL_DAYS=7
 ```
 
 ## Webhook local

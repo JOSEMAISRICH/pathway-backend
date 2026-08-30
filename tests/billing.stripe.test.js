@@ -26,6 +26,7 @@ describe('Billing Stripe', () => {
     getStripe.mockReturnValue({
       customers: {
         create: jest.fn(async () => ({ id: 'cus_test_1' })),
+        update: jest.fn(async () => ({})),
       },
       checkout: {
         sessions: {
@@ -71,17 +72,18 @@ describe('Billing Stripe', () => {
     expect(res.status).toBe(401);
   });
 
-  test('GET /api/billing/status → billing none', async () => {
+  test('GET /api/billing/status → app trial activo tras registro', async () => {
     const { cookie } = await registerAgency();
     const app = await getApp();
     const res = await request(app).get('/api/billing/status').set('Cookie', cookie);
     expect(res.status).toBe(200);
-    expect(res.body.billing.active).toBe(false);
-    expect(res.body.billing.status).toBe('none');
+    expect(res.body.billing.active).toBe(true);
+    expect(res.body.billing.status).toBe('app_trial');
+    expect(res.body.billing.trialEndsAt).toBeTruthy();
     expect(res.body.billing.priceMonthly).toBe(75);
   });
 
-  test('POST /api/billing/checkout → url Stripe', async () => {
+  test('POST /api/billing/checkout → url Stripe (sin trial en Checkout)', async () => {
     const { cookie } = await registerAgency();
     const app = await getApp();
     const res = await request(app)
@@ -94,7 +96,7 @@ describe('Billing Stripe', () => {
     expect(res.body.sessionId).toBe('cs_test_1');
 
     const createCall = getStripe().checkout.sessions.create.mock.calls[0][0];
-    expect(createCall.subscription_data.trial_period_days).toBe(7);
+    expect(createCall.subscription_data.trial_period_days).toBeUndefined();
 
     const agency = await Agency.findOne({}).select('+stripe.customerId').exec();
     expect(agency.stripe.customerId).toBe('cus_test_1');

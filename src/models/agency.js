@@ -90,6 +90,9 @@ const agencySchema = new mongoose.Schema(
       default: () => ({}),
     },
 
+    /** Fin de la prueba gratuita en app (sin tarjeta). Null = inferir desde createdAt en billing. */
+    trialEndsAt: { type: Date, default: null },
+
     /** Equipo adicional (usuarios colección User). Dueño puede ser el email de esta agencia. */
     members: [teamMemberSchema],
 

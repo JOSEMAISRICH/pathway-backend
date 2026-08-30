@@ -13,10 +13,38 @@ function appOrigin() {
   return (config.portalBaseUrl || 'http://localhost:5500').replace(/\/$/, '');
 }
 
+/** Fin de prueba en app (sin Stripe). Null si no aplica. */
+function getAppTrialEnd(agency) {
+  const stripeStatus = agency.stripe?.status || '';
+  if (ACTIVE_STATUSES.has(stripeStatus)) return null;
+
+  if (agency.trialEndsAt) {
+    return new Date(agency.trialEndsAt);
+  }
+
+  if (agency.createdAt && config.appTrialDays > 0) {
+    return new Date(new Date(agency.createdAt).getTime() + config.appTrialDays * 24 * 60 * 60 * 1000);
+  }
+
+  return null;
+}
+
+function isAppTrialActive(agency) {
+  const end = getAppTrialEnd(agency);
+  return Boolean(end && end > new Date());
+}
+
 function serializeBilling(agency) {
   const stripe = agency.stripe || {};
   const billing = agency.billing || {};
   const status = stripe.status || '';
+  const stripeActive = ACTIVE_STATUSES.has(status);
+  const appTrialEnd = getAppTrialEnd(agency);
+  const appTrialActive = isAppTrialActive(agency);
+  const periodEnd =
+    stripe.currentPeriodEnd ||
+    (appTrialActive && appTrialEnd ? appTrialEnd : null);
+
   return {
     configured: Boolean(config.stripeSecretKey),
     plan: billing.plan || 'standard',
@@ -24,9 +52,14 @@ function serializeBilling(agency) {
     currency: (billing.currency || 'EUR').toUpperCase(),
     /** Email de la agencia (login); en Checkout se usa como facturación editable vía nuestro form. */
     email: agency.email || '',
-    status: status || 'none',
-    active: ACTIVE_STATUSES.has(status),
-    currentPeriodEnd: stripe.currentPeriodEnd || null,
+    status: stripeActive ? status : appTrialActive ? 'app_trial' : status || 'none',
+    active: stripeActive || appTrialActive,
+    trialEndsAt: appTrialActive && appTrialEnd ? appTrialEnd.toISOString() : null,
+    currentPeriodEnd: periodEnd
+      ? periodEnd instanceof Date
+        ? periodEnd.toISOString()
+        : periodEnd
+      : null,
     cancelAtPeriodEnd: Boolean(stripe.cancelAtPeriodEnd),
     subscriptionId: stripe.subscriptionId || null,
   };
@@ -58,10 +91,7 @@ async function ensureStripeCustomer(agency) {
  * El email de facturación se elige en PathWay (campo editable). Stripe Checkout con `customer`
  * deja el correo fijo; por eso no se edita en la página de Stripe, sino antes de abrirla.
  */
-async function createCheckoutSession(
-  agency,
-  { successUrl, cancelUrl, trial = true, customerEmail } = {}
-) {
+async function createCheckoutSession(agency, { successUrl, cancelUrl, customerEmail } = {}) {
   const email = String(customerEmail || agency.email || '')
     .trim()
     .toLowerCase();
@@ -107,8 +137,7 @@ async function createCheckoutSession(
         },
       ];
 
-  const applyTrial = trial !== false && config.stripeTrialDays > 0;
-
+  /** La prueba gratuita es en app; Stripe Checkout cobra desde el primer día. */
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     customer: customerId,
@@ -119,7 +148,6 @@ async function createCheckoutSession(
     metadata: { agencyId: agency._id.toString(), billingEmail: email },
     subscription_data: {
       metadata: { agencyId: agency._id.toString() },
-      ...(applyTrial ? { trial_period_days: config.stripeTrialDays } : {}),
     },
   });
 

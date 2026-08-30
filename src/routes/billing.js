@@ -45,10 +45,8 @@ router.post('/checkout', mongoReady, requireAgency, async (req, res, next) => {
     if (!agency) return res.status(404).json({ error: 'Agencia no encontrada' });
 
     const body = req.body || {};
-    const trial =
-      body.trial === false || body.trial === 'false' || body.skipTrial === true
-        ? false
-        : true;
+    /** Stripe cobra desde ya; la prueba gratuita es en app (sin tarjeta al registrarse). */
+    const trial = body.trial === true || body.trial === 'true';
     const { url, sessionId } = await createCheckoutSession(agency, {
       successUrl: body.successUrl,
       cancelUrl: body.cancelUrl,
