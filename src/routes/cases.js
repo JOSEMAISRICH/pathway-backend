@@ -10,6 +10,7 @@ const Document = require('../models/document');
 const { CLIENT_STATUSES } = require('../models/client');
 const { mongoReady } = require('../middleware/mongoReady');
 const { requireAgency } = require('../middleware/requireAgency');
+const { requirePaidPlan } = require('../middleware/requirePaidPlan');
 const { config } = require('../config');
 const { httpError } = require('../lib/httpError');
 const { processPassportUpload } = require('../lib/passportPipeline');
@@ -96,7 +97,7 @@ const passportUpload = multer({
   },
 });
 
-router.use(mongoReady, requireAgency);
+router.use(mongoReady, requireAgency, requirePaidPlan);
 
 async function clientWithDocuments(client) {
   return serializeCaseDetail(client);
