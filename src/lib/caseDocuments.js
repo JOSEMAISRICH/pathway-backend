@@ -155,7 +155,6 @@ function hasRejectedDocuments(docs) {
  * @param {{ magic?: boolean }} [opts]
  */
 function buildFinalPdfUrl(client, opts = {}) {
-  if (!client?.finalPdfPath) return null;
   if (opts.magic && client.magicLinkToken) {
     return `/api/magic/${client.magicLinkToken}/final-pdf`;
   }

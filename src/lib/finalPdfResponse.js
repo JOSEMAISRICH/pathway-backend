@@ -9,9 +9,14 @@ const fs = require('fs/promises');
 const path = require('path');
 const { config } = require('../config');
 const { presignedGetObjectUrl, s3ObjectExists } = require('./s3Storage');
+const {
+  getLegacyExtractedForPdf,
+  hasUsableExtractedIdentity,
+} = require('./caseDocuments');
+const { stampExpedientePdf } = require('./pdf/stampExpedientePdf');
 
 const PDF_NOT_READY_MESSAGE =
-  'Aún no se ha generado el PDF del expediente. El cliente debe completar la subida.';
+  'Aún no se ha generado el PDF del expediente. Completa los datos del pasaporte y vuelve a intentarlo.';
 
 function respondPdfNotReady(res) {
   return res.status(404).json({ error: PDF_NOT_READY_MESSAGE });
@@ -51,11 +56,36 @@ async function assertFinalPdfAvailable(client) {
 }
 
 /**
+ * Si el expediente está aprobado y hay datos de identidad, genera el PDF bajo demanda.
+ * @param {import('mongoose').Document} client
+ */
+async function ensureClientFinalPdf(client) {
+  if ((await assertFinalPdfAvailable(client)) === 'ok') return client;
+
+  const approved = (client.reviewStatus || 'pending') === 'approved';
+  if (!approved) return client;
+
+  const flat = await getLegacyExtractedForPdf(client);
+  if (!hasUsableExtractedIdentity(flat)) return client;
+
+  try {
+    const pdf = await stampExpedientePdf(client._id.toString(), flat);
+    client.finalPdfPath = pdf.objectKey || pdf.relativePath;
+    client.finalPdfOnS3 = pdf.storage === 's3';
+    await client.save();
+  } catch (e) {
+    console.error('[finalPdf][ensure]', e.message);
+  }
+  return client;
+}
+
+/**
  * @param {import('express').Response} res
  * @param {import('express').Request} req
  * @param {import('mongoose').Document} client Expediente con finalPdfPath y finalPdfOnS3
  */
 async function sendExpedienteFinalPdf(res, req, client) {
+  await ensureClientFinalPdf(client);
   const availability = await assertFinalPdfAvailable(client);
   if (availability !== 'ok') {
     return respondPdfNotReady(res);
@@ -102,5 +132,6 @@ async function sendExpedienteFinalPdf(res, req, client) {
 module.exports = {
   sendExpedienteFinalPdf,
   assertFinalPdfAvailable,
+  ensureClientFinalPdf,
   PDF_NOT_READY_MESSAGE,
 };

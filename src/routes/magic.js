@@ -5,7 +5,7 @@ const Agency = require('../models/agency');
 const { mongoReady } = require('../middleware/mongoReady');
 const { config } = require('../config');
 const { httpError } = require('../lib/httpError');
-const { sendExpedienteFinalPdf } = require('../lib/finalPdfResponse');
+const { sendExpedienteFinalPdf, PDF_NOT_READY_MESSAGE } = require('../lib/finalPdfResponse');
 const { sendLatestPassportOriginal, getLatestPassportArchivo } = require('../lib/passportOriginalDownload');
 const { isMagicLinkExpired } = require('../lib/magicLinkExpiry');
 const { ingestDocument, ingestPassportUpload } = require('../lib/documentIngestionService');
@@ -58,6 +58,21 @@ async function loadActiveClientByToken(token) {
   return { client };
 }
 
+/** Descarga PDF: enlace vigente y (aprobado o PDF ya generado). No bloquea por status completed. */
+async function loadClientByTokenForPdf(token) {
+  const client = await Client.findOne({ magicLinkToken: token }).exec();
+  if (!client) return { error: { status: 404, message: MAGIC_INVALID_MSG } };
+  if (isMagicLinkExpired(client.magicExpiresAt)) {
+    return { error: { status: 410, message: MAGIC_EXPIRED_MSG } };
+  }
+  const approved = (client.reviewStatus || 'pending') === 'approved';
+  const hasPdf = Boolean((client.finalPdfPath || '').trim());
+  if (!approved && !hasPdf) {
+    return { error: { status: 404, message: PDF_NOT_READY_MESSAGE } };
+  }
+  return { client };
+}
+
 function magicGoneResponse(res, message) {
   return res.status(410).json({ error: message });
 }
@@ -87,7 +102,7 @@ async function serializeMagicCase(client, agency) {
         ? `/api/magic/${client.magicLinkToken}/passport-original`
         : null,
       finalPdfUrl:
-        approved && hasFinalPdf ? buildFinalPdfUrl(client, { magic: true }) : null,
+        approved || hasFinalPdf ? buildFinalPdfUrl(client, { magic: true }) : null,
       reviewStatus: c.reviewStatus || 'pending',
       feedbackMessage: c.feedbackMessage || '',
       reviewedAt: c.reviewedAt || null,
@@ -242,11 +257,11 @@ router.post('/:token/upload-passport', (req, res, next) => {
 /**
  * GET /api/magic/:token/final-pdf
  * Permite al cliente (sin sesión) descargar/previsualizar su expediente PDF
- * mientras su magic link siga vigente y el expediente no esté completado.
+ * mientras su magic link siga vigente y el expediente esté aprobado.
  */
 router.get('/:token/final-pdf', async (req, res, next) => {
   try {
-    const { client, error } = await loadActiveClientByToken(req.params.token);
+    const { client, error } = await loadClientByTokenForPdf(req.params.token);
     if (error) return res.status(error.status).json({ error: error.message });
     return sendExpedienteFinalPdf(res, req, client);
   } catch (e) {

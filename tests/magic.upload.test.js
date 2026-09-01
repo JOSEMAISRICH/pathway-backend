@@ -73,6 +73,10 @@ describe('Magic link cliente', () => {
     expect(portal.body.case.reviewStatus).toBe('approved');
     expect(portal.body.case.finalPdfUrl).toMatch(/final-pdf/);
 
+    const pdfRes = await request(ctx.app).get(`/api/magic/${ctx.magicToken}/final-pdf`);
+    expect(pdfRes.status).toBe(200);
+    expect(pdfRes.headers['content-type']).toBe('application/pdf');
+
     const portalDocs = await request(ctx.app).get(`/api/magic/${ctx.magicToken}`);
     const docId = portalDocs.body.case.documents.find((d) => d.key === 'photo')?.id;
     const blocked = await request(ctx.app)

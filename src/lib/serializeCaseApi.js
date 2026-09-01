@@ -46,7 +46,8 @@ function enrichCaseJson(client, docs) {
   }
 
   j.hasFinalPdf = Boolean(client.finalPdfPath);
-  j.finalPdfUrl = client.finalPdfPath ? buildFinalPdfUrl(client) : null;
+  const approved = (j.reviewStatus || 'pending') === 'approved';
+  j.finalPdfUrl = approved || j.hasFinalPdf ? buildFinalPdfUrl(client) : null;
 
   return j;
 }
