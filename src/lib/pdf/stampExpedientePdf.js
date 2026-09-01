@@ -79,7 +79,20 @@ async function readTemplate() {
   }
 }
 
+function flatForStamp(extractedData) {
+  const data =
+    extractedData && typeof extractedData === 'object' ? { ...extractedData } : {};
+  if (!data.fecha_caducidad && data.fecha_caducidad_pasaporte) {
+    data.fecha_caducidad = data.fecha_caducidad_pasaporte;
+  }
+  if (!data.genero && data.sexo) {
+    data.genero = data.sexo;
+  }
+  return data;
+}
+
 function tryFillAcroForm(pdfDoc, extractedData) {
+  const data = flatForStamp(extractedData);
   let form;
   try {
     form = pdfDoc.getForm();
@@ -103,13 +116,14 @@ function tryFillAcroForm(pdfDoc, extractedData) {
 }
 
 async function stampWithCoordinates(pdfDoc, extractedData) {
+  const data = flatForStamp(extractedData);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const pages = pdfDoc.getPages();
   if (pages.length === 0) return;
 
   for (const [dataKey, coords] of Object.entries(STAMP_COORDS)) {
-    const v = safeText(extractedData[dataKey]);
+    const v = safeText(data[dataKey]);
     if (!v) continue;
     const page = pages[coords.page] || pages[0];
     const isAlerta = dataKey === 'alerta';

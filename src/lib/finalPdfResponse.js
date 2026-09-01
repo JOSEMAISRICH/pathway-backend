@@ -60,22 +60,22 @@ async function assertFinalPdfAvailable(client) {
  * @param {import('mongoose').Document} client
  */
 async function ensureClientFinalPdf(client) {
-  if ((await assertFinalPdfAvailable(client)) === 'ok') return client;
-
-  const approved = (client.reviewStatus || 'pending') === 'approved';
-  if (!approved) return client;
-
   const flat = await getLegacyExtractedForPdf(client);
-  if (!hasUsableExtractedIdentity(flat)) return client;
+  const approved = (client.reviewStatus || 'pending') === 'approved';
 
-  try {
-    const pdf = await stampExpedientePdf(client._id.toString(), flat);
-    client.finalPdfPath = pdf.objectKey || pdf.relativePath;
-    client.finalPdfOnS3 = pdf.storage === 's3';
-    await client.save();
-  } catch (e) {
-    console.error('[finalPdf][ensure]', e.message);
+  if (approved && hasUsableExtractedIdentity(flat)) {
+    try {
+      const pdf = await stampExpedientePdf(client._id.toString(), flat);
+      client.finalPdfPath = pdf.objectKey || pdf.relativePath;
+      client.finalPdfOnS3 = pdf.storage === 's3';
+      await client.save();
+    } catch (e) {
+      console.error('[finalPdf][ensure]', e.message);
+    }
+    return client;
   }
+
+  if ((await assertFinalPdfAvailable(client)) === 'ok') return client;
   return client;
 }
 
